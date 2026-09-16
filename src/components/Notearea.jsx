@@ -15,8 +15,8 @@ function Notearea() {
     function addNote() {
 
 
-        
-// already exist
+
+        // already exist
         const alreadyExists = notes.some(function (note) {
             return note.title === title && note.content === content
         })
@@ -77,18 +77,21 @@ function Notearea() {
 
             {/* area of input displaying under the form */}
 
-            <div className="">
+            <div className="bg-gray-100 mt-10 p-6">
+
                 {notes.map((note) => {
                     return (
-                        <div>
-                            <h2>{note.title}</h2>
-                            <p>{note.content}</p>
+                        <div className="bg-amber-300 p-4 mb-4 h-50">
+                            <h2 className="font-bold text-xl mt-5 ml-6">{note.title}</h2>
+                            <p className="text-lg mt-2 ml-6">{note.content}</p>
                         </div>
                     )
                 })}
-            </div>
 
+            </div>
         </div>
+
+
     )
 }
 export default Notearea
