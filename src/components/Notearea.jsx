@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 function Notearea() {
 
@@ -9,7 +9,9 @@ function Notearea() {
 
 
     //to save the notes
-    const [notes, setNotes] = useState([])
+    const [notes, setNotes] = useState(
+    JSON.parse(localStorage.getItem("notes")) || []
+)
 
     //color session
     const [color, setColor] = useState("")
@@ -19,10 +21,26 @@ function Notearea() {
 
 
 
-    //
+    //editing option
+    const [editingIndex, setEditingIndex] = useState(null)
 
+
+    //search
+    const [search, setSearch] = useState("")
+
+
+
+    //error
+    const [error, setError] = useState("")
+
+
+    //archived
+    const [showArchived, setShowArchived] = useState(false)
 
     function addNote() {
+
+
+
 
 
 
@@ -32,23 +50,40 @@ function Notearea() {
         })
 
         if (alreadyExists) {
+            setError("content already exist")
             return
         }
         if (title.trim() === "" && content.trim() === "") {
             return
         }
+        if (title.length > 25) {
+            setError("Title must be 25 characters or less");
+            return;
+        }
+        // Content required
+        if (title.trim() === "") {
+            setError("Title is required")
+            return;
+        }
+        if (content.trim() === "") {
+            setError("Content is required");
+            return;
+        }
+
         const newNote = {
             //for sort newest/oldest
             id: Date.now(),
             title: title,
             content: content,
-            color: color
+            color: color,
+            archived: false
         }
 
         setNotes([...notes, newNote])
 
         setTitle("")
         setContent("")
+        setError("")
     }
 
 
@@ -59,30 +94,114 @@ function Notearea() {
         }))
     }
 
+    if (editingIndex !== null) {
+
+        const updatedNotes = notes.map(function (note) {
+
+            if (note.id === editingIndex) {
+                return {
+                    ...note,
+                    title: title,
+                    content: content,
+                    color: color,
+
+                }
+            }
+
+            return note
+        })
+
+        setNotes(updatedNotes)
+        setTitle("")
+        setContent("")
+        setEditingIndex(null)
+
+        return
+    }
+
+    //search
+    const filteredNotes = notes.filter(function (note) {
+
+        return (
+            note.archived === showArchived &&
+            (
+                note.title.toLowerCase().includes(search.toLowerCase()) ||
+                note.content.toLowerCase().includes(search.toLowerCase())
+            )
+        )
+    })
+
 
     //sorting conditions 
-    const sortedNotes = [...notes].sort(function (a, b) {
+    const sortedNotes = [...filteredNotes].sort(function (a, b) {
 
-    
 
-    if (sortBy === "newest") {
-        return b.id - a.id;
+
+        if (sortBy === "newest") {
+            return b.id - a.id;
+        }
+
+        if (sortBy === "oldest") {
+            return a.id - b.id;
+        }
+
+        if (sortBy === "title-asc") {
+            return a.title.localeCompare(b.title);
+        }
+
+        if (sortBy === "title-desc") {
+            return b.title.localeCompare(a.title);
+        }
+
+        return 0;
+    });
+
+
+    //edit function
+    function editNote(id) {
+        const note = notes.find(function (note) {
+            return note.id === id
+        })
+
+        setTitle(note.title)
+        setContent(note.content)
+        setEditingIndex(id)
     }
 
-    if (sortBy === "oldest") {
-        return a.id - b.id;
+
+
+    //archive note
+    function archiveNote(id) {
+        setNotes(notes.map(function (note) {
+
+            if (note.id === id) {
+                return {
+                    ...note,
+                    archived: true
+                }
+            }
+
+            return note
+        }))
     }
 
-    if (sortBy === "title-asc") {
-        return a.title.localeCompare(b.title);
-    }
+    function unarchiveNote(id) {
+    setNotes(notes.map(function (note) {
+        if (note.id === id) {
+            return {
+                ...note,
+                archived: false
+            }
+        }
+        return note
+    }))
+}
 
-    if (sortBy === "title-desc") {
-        return b.title.localeCompare(a.title);
-    }
 
-    return 0;
-});
+useEffect(function () {
+    localStorage.setItem("notes", JSON.stringify(notes))
+}, [notes])
+
 
 
 
@@ -92,7 +211,7 @@ function Notearea() {
 
 
         <div>
-            <div className="border border-gray-700 w-150  mx-auto my-8 h-100 bg-blue-300">
+            <div className="border border-gray-700 w-150  mx-auto my-8 h-auto bg-blue-300">
                 <div className="mt-10- px-10 py-5">
                     <input
                         value={title}
@@ -102,6 +221,9 @@ function Notearea() {
                         className="w-full h-15 px-5 border border-gray-400"
                         type="text"
                         placeholder="Title" />
+                    <p>
+                        {title.length} / 25
+                    </p>
                     <input
                         value={content}
                         onChange={(event) =>
@@ -161,8 +283,8 @@ function Notearea() {
                             type="button"
                             onClick={() => setColor("bg-orange-300")}
                             className={`w-8 h-8 rounded-full bg-orange-300 ${color === "bg-orange-100"
-                                    ? "ring-2 ring-black"
-                                    : ""
+                                ? "ring-2 ring-black"
+                                : ""
                                 }`}
                         ></button>
                     </div>
@@ -175,17 +297,24 @@ function Notearea() {
 
                     <button
                         onClick={addNote}
-                        className="mx-40 bg-amber-700 rounded w-45 h-8 ">
+                        className="mx-40 bg-amber-700 rounded w-45 h-8 mt-5">
                         Add Note
                     </button>
+                </div>
+                <div>
+                    {error && (
+                        <p className="text-red-600 mt-2">
+                            {error}
+                        </p>
+                    )}
                 </div>
                 <div className="mx-auto">
 
                 </div>
             </div>
-            
+
             <div>
-                 <select
+                <select
                     value={sortBy}
                     onChange={(event) =>
                         setSortBy(event.target.value)
@@ -210,12 +339,28 @@ function Notearea() {
                 </select>
 
             </div>
-            
-            
-            
+            <div>
+                <input
+                    type="text"
+                    placeholder="Search notes..."
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    className="border border-gray-300 px-4 py-2 rounded-lg"
+                />
+                <button 
+                className="border ml-5 rounded-2xl h-10 w-30 bg-blue-400"
+                onClick={() => setShowArchived(!showArchived)}>
+                    {showArchived ? "Show Notes" : "Show Archived"}
+                </button>
+
+
+            </div>
+
+
+
             {/* area of input displaying under the form */}
 
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-3 gap-1 mt-5">
 
                 {sortedNotes.map((note, index) => {
                     return (
@@ -226,6 +371,17 @@ function Notearea() {
                             <p className="text-lg mt-2 ml-6">{note.content}</p>
 
 
+
+                            <button
+                                className="bg-yellow-400 w-20 mt-50 ml-6 rounded-2xl"
+                                onClick={function () {
+                                    editNote(note.id)
+                                }}
+                            >
+                                Edit
+                            </button>
+
+
                             {/* delete button */}
                             <button
                                 className="bg-red-600 w-20 mt-50 ml-6 rounded-2xl"
@@ -233,6 +389,18 @@ function Notearea() {
                                     deleteNote(index)
                                 }}>
                                 Delete
+                            </button>
+                            <button
+                                className="bg-green-600 text-white w-20 mt-50 ml-6 rounded-2xl"
+                                onClick={function () {
+                                    if (showArchived) {
+                                        unarchiveNote(note.id)
+                                    } else {
+                                        archiveNote(note.id)
+                                    }
+                                }}
+                            >
+                                {showArchived ? "Unarchive" : "Archive"}
                             </button>
                         </div>
                     )
