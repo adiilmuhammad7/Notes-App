@@ -1,0 +1,29 @@
+{
+  "notes": [
+    {
+      "id": "cTf-5NrW7Mg",
+      "title": "skanda love",
+      "content": "shruthi",
+      "createdAt": 1790233611968,
+      "color": "bg-amber-100",
+      "archived": false
+    },
+    {
+      "id": "vZ36HvuBMzI",
+      "title": "z",
+      "content": "z",
+      "createdAt": 1790233625953,
+      "color": "bg-amber-100",
+      "archived": false
+    },
+    {
+      "id": "mVbv5Sd43QA",
+      "title": "x",
+      "content": "x",
+      "createdAt": 1790233687418,
+      "color": "bg-sky-100",
+      "archived": false
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}

@@ -9,9 +9,7 @@ function Notearea() {
 
 
     //to save the notes
-    const [notes, setNotes] = useState(
-        JSON.parse(localStorage.getItem("notes")) || []
-    )
+    const [notes, setNotes] = useState([])
 
     //color session
     const [color, setColor] = useState("")
@@ -37,33 +35,51 @@ function Notearea() {
     //archived
     const [showArchived, setShowArchived] = useState(false)
 
-    function addNote() {
+    async function addNote() {
 
 
         if (editingIndex !== null) {
 
-        const updatedNotes = notes.map(function (note) {
+            const updatedNotes = notes.map(function (note) {
 
-            if (note.id === editingIndex) {
-                return {
-                    ...note,
+                if (note.id === editingIndex) {
+                    return {
+                        ...note,
+                        title: title,
+                        content: content,
+                        color: color,
+
+                    }
+
+                }
+
+                return note
+            })
+
+
+            // for database json
+            await fetch(`http://localhost:3000/notes/${editingIndex}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
                     title: title,
                     content: content,
                     color: color,
+                    archived: notes.find(function (note) {
+                        return note.id === editingIndex
+                    }).archived
+                })
+            })
 
-                }
-            }
+            setNotes(updatedNotes)
+            setTitle("")
+            setContent("")
+            setEditingIndex(null)
 
-            return note
-        })
-
-        setNotes(updatedNotes)
-        setTitle("")
-        setContent("")
-        setEditingIndex(null)
-
-        return
-    }
+            return
+        }
 
 
 
@@ -103,11 +119,20 @@ function Notearea() {
             id: Date.now(),
             title: title,
             content: content,
+            createdAt: Date.now(),
             color: color,
             archived: false
         }
+        const response = await fetch("http://localhost:3000/notes", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(newNote)
+        })
+        await getNotes()
 
-        setNotes([...notes, newNote])
+
 
         setTitle("")
         setContent("")
@@ -116,13 +141,15 @@ function Notearea() {
 
 
     //delete
-    function deleteNote(index) {
-        setNotes(notes.filter(function (note, i) {
-            return i !== index
-        }))
+    async function deleteNote(id) {
+        await fetch(`http://localhost:3000/notes/${id}`, {
+            method: "DELETE"
+        })
+
+        await getNotes()
     }
 
-    
+
     //search
     const filteredNotes = notes.filter(function (note) {
 
@@ -142,11 +169,11 @@ function Notearea() {
 
 
         if (sortBy === "newest") {
-            return b.id - a.id;
+            return b.createdAt - a.createdAt;
         }
 
         if (sortBy === "oldest") {
-            return a.id - b.id;
+            return a.createdAt - b.createdAt;
         }
 
         if (sortBy === "title-asc") {
@@ -160,16 +187,17 @@ function Notearea() {
         return 0;
     });
 
-            //edit function
-        function editNote(id) {
-            const note = notes.find(function (note) {
-                return note.id === id
-            })
+    //edit function
+    function editNote(id) {
+        const note = notes.find(function (note) {
+            return note.id === id
+        })
 
-            setTitle(note.title)
-            setContent(note.content)
-            setEditingIndex(id)
-        }
+        setTitle(note.title)
+        setContent(note.content)
+        setColor(note.color)
+        setEditingIndex(id)
+    }
 
 
 
@@ -177,36 +205,56 @@ function Notearea() {
 
 
     //archive note
-    function archiveNote(id) {
-        setNotes(notes.map(function (note) {
+    async function archiveNote(id) {
 
-            if (note.id === id) {
-                return {
-                    ...note,
-                    archived: true
-                }
-            }
+        await fetch(`http://localhost:3000/notes/${id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                archived: true
+            })
+        })
 
-            return note
-        }))
+        await getNotes()
     }
 
-    function unarchiveNote(id) {
-        setNotes(notes.map(function (note) {
-            if (note.id === id) {
-                return {
-                    ...note,
-                    archived: false
-                }
-            }
-            return note
-        }))
+    async function unarchiveNote(id) {
+
+        await fetch(`http://localhost:3000/notes/${id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                archived: false
+            })
+        })
+
+        await getNotes()
     }
 
 
+
+
+
+    // from database
     useEffect(function () {
-        localStorage.setItem("notes", JSON.stringify(notes))
-    }, [notes])
+        getNotes()
+    }, [])
+
+
+
+
+    // from the database(json server)
+    async function getNotes() {
+        const response = await fetch("http://localhost:3000/notes");
+
+        const data = await response.json();
+
+        setNotes(data);
+    }
 
 
 
@@ -306,6 +354,12 @@ function Notearea() {
                         className="mx-40 bg-amber-700 rounded w-45 h-8 mt-5">
                         Add Note
                     </button>
+
+
+
+
+
+
                 </div>
                 <div>
                     {error && (
@@ -368,10 +422,12 @@ function Notearea() {
 
             <div className="grid grid-cols-3 gap-1 mt-5">
 
-                {sortedNotes.map((note, index) => {
+                {sortedNotes.map((note) => {
                     return (
 
-                        <div className={`${note.color} rounded-2xl p-4 mb-4 h-90 ml-10 mr-10`}>
+                        <div
+                            key={note.id}
+                            className={`${note.color} rounded-2xl p-4 mb-4 h-90 ml-10 mr-10`}>
 
                             <h2 className="font-bold text-xl mt-5 ml-6">{note.title}</h2>
                             <p className="text-lg mt-2 ml-6">{note.content}</p>
@@ -392,7 +448,7 @@ function Notearea() {
                             <button
                                 className="bg-red-600 w-20 mt-50 ml-6 rounded-2xl"
                                 onClick={function () {
-                                    deleteNote(index)
+                                    deleteNote(note.id)
                                 }}>
                                 Delete
                             </button>
